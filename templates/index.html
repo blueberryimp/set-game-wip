@@ -1,0 +1,232 @@
+{% extends 'base.html'%}
+
+
+{% block content %}
+
+<!-- <div class="msg error">Sorry! is not a set!</div>
+<br><br> -->
+<h2 class='timer'></h2>
+
+<button id='start-timer'type="button" class="btn btn-outline-secondary btn-md center-block">Start!</button>
+<br>
+
+Total Sets Found:<span id='result' class='.score'>0</span>
+
+<br>
+<button id='score-btn'type="button" class="btn btn-info btn-sm center-block">Save score!</button>
+
+<br><br>
+
+<button id='shuffle'type="button" class="btn btn-outline-primary btn-lg">Shuffle cards!</button>
+<button id='append'type="button" class="btn btn-outline-secondary btn-lg">Add more cards!</button>
+<br><br>
+
+
+    {% for card in cards %}
+  <img  class = 'cards' src= '{{ card.card_image }}' name= '{{card.card_name}}' color='{{card.color}}' shape='{{card.shape}}' pattern='{{card.pattern}}' number="{{card.number}}">
+    {% endfor %}
+
+    <div class='grid'>
+</div>
+
+  <div class="alert alert-danger" id='nonset-alert'>
+    <strong>Noooo!</strong> Not a set, silly! :P <a href="#enter link for what a set is" class="alert-link">What's a set?</a>.
+  </div>
+
+<script>
+'use strict';
+$('.cards').hide();
+$('.msg').hide();
+$('#nonset-alert').hide();
+
+//returns card images in an array called deck
+var deck = $('.cards').map(function(card) {
+    var src = this.src;
+    return this;
+}).get();
+
+//fisher-yates shuffle algorithm
+function shuffle(deck) {
+    var i,
+        j,
+        temp;
+    for (i = deck.length - 1; i > 0; i--) {
+      //pick a remaining element
+        j = Math.floor(Math.random() * (i + 1));
+      //swap element with the current element
+        temp = deck[i];
+        deck[i] = deck[j];
+        deck[j] = temp;
+    }
+    return deck;
+};
+
+
+var setsFound = 0;
+
+
+$('#start-timer').on('click', function() {
+  var start = new Date;
+
+setInterval(function() {
+    $('.timer').text((new Date - start) / 1000 + " Seconds");
+}, 1000);
+
+});
+
+$('#score-btn').on('click', function() {
+$('.timer').html('0');
+$('.timer').hide();
+$('#start-timer').hide();
+$('#score-btn').html('score saved!');
+});
+
+
+
+
+
+
+$('.timer').html('0:00:00');
+
+
+
+var $grid = $('.grid').isotope({
+  itemSelector: '.cards',
+  layoutMode: 'masonry',
+   masonry: {
+          columnWidth: 300
+      }
+    });
+
+
+$(window).on('load', function() {
+  var $cardsOnBoard = shuffle(deck).splice(0, 12);
+  $grid.isotope( 'appended', $cardsOnBoard );
+   $grid.append($cardsOnBoard);
+    $grid.isotope('layout');
+});
+
+$('#shuffle').on( 'click', function() {
+  $grid.isotope('shuffle');
+});
+
+$('#append').on( 'click', function() {
+  var $threeCards = shuffle(deck).splice(0, 3);
+  $grid.append($threeCards);
+  $grid.isotope( 'appended', $threeCards );
+  $grid.isotope('layout');
+
+});
+
+ var numCardsSelected = 0;
+
+        $('.grid').on('click', '.cards', function() {
+          var card = $('.cards').index(this);
+          var color = $(this).attr('color');
+          var shape = $(this).attr('shape');
+          var pattern = $(this).attr('pattern');
+          var number = $(this).attr('number');
+
+
+            if ($(this).attr("isSelected") === "true") {
+                $(this).removeClass('selected');
+                $(this).attr("isSelected", "false");
+                numCardsSelected--;
+           }  else {
+             if (numCardsSelected < 3){
+                $(this).addClass('selected');
+                $(this).attr("isSelected", "true");
+                numCardsSelected++;
+                console.log(card, color, shape, pattern, number, numCardsSelected);
+                if(numCardsSelected === 3){
+                  var cards = [];
+                  var selected = $('[isSelected="true"]');
+                  for (var i = 0; i < selected.length; i++) {
+                    cards.push($(selected[i]));
+                }
+                  checkAttribute(cards);
+                  numCardsSelected = 0;
+            }
+        }
+    }
+})
+
+function isAttrSame(attrs){
+  var i = null;
+  for (i in attrs){
+    if(attrs[0] !== attrs[i]){
+      return false;
+    }
+  }
+  return true;
+}
+
+function isAttrDiff(attrs){
+    if(attrs[0] !== attrs[1] && attrs[0] !== attrs[2] && attrs[1] !== attrs[2]) {
+       return true;
+       }
+   return false;
+}
+
+function checkAttribute(cards) {
+  var colors = []; var shapes = []; var patterns = []; var quantity = [];
+  var attrScore = 0;
+
+      cards.forEach(function (card) {
+        colors.push(card.attr('color'));
+        shapes.push(card.attr('shape'));
+        patterns.push(card.attr('pattern'));
+        quantity.push(parseInt(card.attr('number')));
+    });
+
+    console.log("Colors: " + JSON.stringify(colors, null, 2));
+    console.log("Shapes: " + JSON.stringify(shapes, null, 2));
+    console.log("Patterns: " + JSON.stringify(patterns, null, 2));
+    console.log("Quantities: " + JSON.stringify(quantity, null, 2));
+
+
+  var attrs = [colors,shapes,patterns,quantity];
+  console.log(attrs);
+  attrs.forEach(function(attr){
+    attrScore += isAttrSame(attr) ? 1 : 0;
+    attrScore += isAttrDiff(attr) ? 1 : 0;
+  })
+
+  if (attrScore === 4 ) {
+
+    console.log("You found a Set");
+     setsFound ++;
+    cards.forEach(function (card) {
+         card.toggle("explode", 1000);
+         card.attr("isSelected", false);
+    });
+     $('#result').html(setsFound);
+     $grid.isotope('layout');
+      var $threeCards = shuffle(deck).splice(0, 3);
+     $grid.append($threeCards);
+     $grid.isotope( 'appended', $threeCards );
+     $grid.isotope('layout');
+
+
+  }else{
+    console.log("You have not found a Set");
+         cards.forEach(function (card) {
+          card.effect("bounce", 1000);
+          card.removeClass('selected', 200);
+          card.attr("isSelected", false);
+        });
+  $('#nonset-alert').show().fadeOut(5000);
+
+    }
+}
+
+$('#score-btn').on('click', function () {
+  var score = {'score': $('#result').html()}
+  console.log(score);
+  $.post('/gamestate', score, function(data) {
+    $('#result').text(data.result);
+  });
+})
+</script>
+
+{% endblock %}
